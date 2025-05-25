@@ -1,0 +1,2 @@
+# Python dependencies for Sudoku AI algorithms
+# No external dependencies needed - using only Python standard library
