@@ -5,7 +5,6 @@ import { SudokuGame } from "@/components/sudoku-game"
 import { AlgorithmComparison } from "@/components/algorithm-comparison"
 import { Statistics } from "@/components/statistics"
 import { ReadmeSection } from "@/components/readme-section"
-import { ThemeToggle } from "@/components/theme-toggle"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Brain, BarChart3, FileText, Gamepad2, Sparkles } from "lucide-react"
 
@@ -23,9 +22,6 @@ export default function SudokuAISolver() {
         <div className="max-w-7xl mx-auto">
           {/* Header */}
           <div className="text-center mb-8 relative">
-            <div className="absolute top-0 right-0">
-              <ThemeToggle />
-            </div>
             <div className="inline-flex items-center gap-3 mb-4">
               <div className="p-3 rounded-2xl bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-lg">
                 <Sparkles className="w-8 h-8" />

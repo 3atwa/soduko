@@ -22,7 +22,6 @@ export async function POST(request: NextRequest) {
 
     if (!fs.existsSync(solverApiPath)) {
       console.log("Python files not found, using fallback simulation")
-      return NextResponse.json(await simulateAlgorithm(grid, algorithm))
     }
 
     try {
@@ -36,7 +35,6 @@ export async function POST(request: NextRequest) {
     } catch (pythonError) {
       console.log("Python execution failed, using fallback:", pythonError)
       // Fallback to simulation
-      return NextResponse.json(await simulateAlgorithm(grid, algorithm))
     }
   } catch (error) {
     console.error("Error in solve API:", error)
@@ -99,88 +97,4 @@ function executePythonScript(scriptPath: string, inputData: any): Promise<any> {
   })
 }
 
-// Fallback simulation function
-async function simulateAlgorithm(grid: number[][], algorithm: string) {
-  const steps: any[] = []
-  let nodesExplored = 0
 
-  // Find empty cells
-  const emptyCells = []
-  for (let i = 0; i < 9; i++) {
-    for (let j = 0; j < 9; j++) {
-      if (grid[i][j] === 0) {
-        emptyCells.push([i, j])
-      }
-    }
-  }
-
-  // Use a simple backtracking solver for simulation
-  const solution = grid.map((row) => [...row])
-
-  function isValid(board: number[][], row: number, col: number, num: number): boolean {
-    // Check row
-    for (let x = 0; x < 9; x++) {
-      if (board[row][x] === num) return false
-    }
-
-    // Check column
-    for (let x = 0; x < 9; x++) {
-      if (board[x][col] === num) return false
-    }
-
-    // Check 3x3 box
-    const startRow = row - (row % 3)
-    const startCol = col - (col % 3)
-    for (let i = 0; i < 3; i++) {
-      for (let j = 0; j < 3; j++) {
-        if (board[i + startRow][j + startCol] === num) return false
-      }
-    }
-
-    return true
-  }
-
-  function solveSudoku(board: number[][]): boolean {
-    for (let row = 0; row < 9; row++) {
-      for (let col = 0; col < 9; col++) {
-        if (board[row][col] === 0) {
-          for (let num = 1; num <= 9; num++) {
-            if (isValid(board, row, col, num)) {
-              board[row][col] = num
-              nodesExplored++
-
-              // Record step
-              steps.push({
-                step: steps.length + 1,
-                position: [row, col],
-                value: num,
-                nodesExplored: nodesExplored,
-                heuristic: algorithm === "astar" ? Math.floor(Math.random() * 10) + 1 : null,
-                beamWidth: algorithm === "beam" ? 5 : null,
-                score: algorithm === "beam" ? Math.floor(Math.random() * 50) + 10 : null,
-              })
-
-              if (solveSudoku(board)) {
-                return true
-              }
-
-              board[row][col] = 0
-            }
-          }
-          return false
-        }
-      }
-    }
-    return true
-  }
-
-  const success = solveSudoku(solution)
-
-  return {
-    success,
-    solution: success ? solution : grid,
-    steps,
-    nodesExplored,
-    algorithm,
-  }
-}

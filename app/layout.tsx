@@ -8,8 +8,7 @@ const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
   title: "AI Sudoku Solver",
-  description: "Compare A* and Beam Search algorithms for solving Sudoku puzzles",
-    generator: 'v0.dev'
+  description: "A* and Beam Search algorithms for solving Sudoku puzzles",
 }
 
 export default function RootLayout({

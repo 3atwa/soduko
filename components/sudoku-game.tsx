@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -18,6 +18,7 @@ interface StepVisualization {
   value: number
   stepNumber: number
   isActive: boolean
+  timeTaken?: number
 }
 
 const DIFFICULTIES = {
@@ -83,6 +84,25 @@ export function SudokuGame({ onSolveComplete }: SudokuGameProps) {
   const [currentAlgorithm, setCurrentAlgorithm] = useState<string>("")
   const [stepVisualizations, setStepVisualizations] = useState<StepVisualization[]>([])
   const [currentStepIndex, setCurrentStepIndex] = useState(-1)
+  const [solveTime, setSolveTime] = useState<number | null>(null)
+  const [currentSolveTime, setCurrentSolveTime] = useState<number>(0)
+
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    
+    if (isLoading) {
+      const startTime = Date.now();
+      setCurrentSolveTime(0);
+      
+      interval = setInterval(() => {
+        setCurrentSolveTime(Date.now() - startTime);
+      }, 100);
+    } else {
+      clearInterval(interval);
+    }
+    
+    return () => clearInterval(interval);
+  }, [isLoading]);
 
   const handleDifficultyChange = (newDifficulty: keyof typeof DIFFICULTIES) => {
     setDifficulty(newDifficulty)
@@ -92,6 +112,7 @@ export function SudokuGame({ onSolveComplete }: SudokuGameProps) {
     setAlgorithmSteps([])
     setStepVisualizations([])
     setCurrentStepIndex(-1)
+    setSolveTime(null)
   }
 
   const resetPuzzle = () => {
@@ -99,6 +120,7 @@ export function SudokuGame({ onSolveComplete }: SudokuGameProps) {
     setAlgorithmSteps([])
     setStepVisualizations([])
     setCurrentStepIndex(-1)
+    setSolveTime(null)
   }
 
   const solvePuzzle = async (algorithm: "astar" | "beam") => {
@@ -107,6 +129,7 @@ export function SudokuGame({ onSolveComplete }: SudokuGameProps) {
     setAlgorithmSteps([])
     setStepVisualizations([])
     setCurrentStepIndex(-1)
+    setSolveTime(null)
 
     const startTime = Date.now()
 
@@ -130,6 +153,8 @@ export function SudokuGame({ onSolveComplete }: SudokuGameProps) {
 
       const result = await response.json()
       const endTime = Date.now()
+      const totalTime = endTime - startTime
+      setSolveTime(totalTime)
 
       if (result.error) {
         console.error("API returned error:", result.error)
@@ -141,14 +166,13 @@ export function SudokuGame({ onSolveComplete }: SudokuGameProps) {
         difficulty,
         success: result.success,
         steps: result.steps?.length || 0,
-        time: endTime - startTime,
+        time: totalTime,
         nodesExplored: result.nodesExplored,
         solution: result.solution,
         timestamp: new Date().toISOString(),
       }
 
       if (result.success && result.steps) {
-        // Animate the solution step by step
         await animateSolution(result.steps)
         setPuzzle(result.solution)
       }
@@ -157,11 +181,7 @@ export function SudokuGame({ onSolveComplete }: SudokuGameProps) {
       onSolveComplete(solveResult)
     } catch (error) {
       console.error("Error solving puzzle:", error)
-
-      // Show user-friendly error message
       const errorMessage = error instanceof Error ? error.message : "Unknown error occurred"
-
-      // Create a fallback result
       const fallbackResult = {
         algorithm,
         difficulty,
@@ -173,7 +193,6 @@ export function SudokuGame({ onSolveComplete }: SudokuGameProps) {
         timestamp: new Date().toISOString(),
         error: errorMessage,
       }
-
       onSolveComplete(fallbackResult)
     } finally {
       setIsLoading(false)
@@ -187,81 +206,31 @@ export function SudokuGame({ onSolveComplete }: SudokuGameProps) {
       value: step.value,
       stepNumber: index + 1,
       isActive: false,
-    }))
+      timeTaken: step.timeTaken || 0,
+    }));
 
-    setStepVisualizations(visualizations)
+    setStepVisualizations(visualizations);
 
     for (let i = 0; i < steps.length; i++) {
-      setCurrentStepIndex(i)
+      const stepStartTime = Date.now();
+      setCurrentStepIndex(i);
 
-      // Update the puzzle grid
-      const step = steps[i]
+      const step = steps[i];
       setPuzzle((prev) => {
-        const newPuzzle = prev.map((row) => [...row])
-        newPuzzle[step.position[0]][step.position[1]] = step.value
-        return newPuzzle
-      })
+        const newPuzzle = prev.map((row) => [...row]);
+        newPuzzle[step.position[0]][step.position[1]] = step.value;
+        return newPuzzle;
+      });
 
-      // Wait for animation
-      await new Promise((resolve) => setTimeout(resolve, 200))
+      const stepTime = Date.now() - stepStartTime;
+      
+      setStepVisualizations(prev => prev.map((vis, idx) => 
+        idx === i ? {...vis, timeTaken: stepTime} : vis
+      ));
+
+      await new Promise((resolve) => setTimeout(resolve, 200));
     }
-  }
-
-  const simulateAlgorithm = async (grid: number[][], algorithm: string) => {
-    const steps: any[] = []
-    const stepDetails: any[] = []
-    let nodesExplored = 0
-
-    // Find empty cells
-    const emptyCells = []
-    for (let i = 0; i < 9; i++) {
-      for (let j = 0; j < 9; j++) {
-        if (grid[i][j] === 0) {
-          emptyCells.push([i, j])
-        }
-      }
-    }
-
-    // Simulate solving process
-    const solution = grid.map((row) => [...row])
-    const solutionValues = [
-      [5, 3, 4, 6, 7, 8, 9, 1, 2],
-      [6, 7, 2, 1, 9, 5, 3, 4, 8],
-      [1, 9, 8, 3, 4, 2, 5, 6, 7],
-      [8, 5, 9, 7, 6, 1, 4, 2, 3],
-      [4, 2, 6, 8, 5, 3, 7, 9, 1],
-      [7, 1, 3, 9, 2, 4, 8, 5, 6],
-      [9, 6, 1, 5, 3, 7, 2, 8, 4],
-      [2, 8, 7, 4, 1, 9, 6, 3, 5],
-      [3, 4, 5, 2, 8, 6, 1, 7, 9],
-    ]
-
-    for (let i = 0; i < emptyCells.length; i++) {
-      const [row, col] = emptyCells[i]
-      const value = solutionValues[row][col]
-
-      nodesExplored += algorithm === "astar" ? Math.floor(Math.random() * 5) + 1 : Math.floor(Math.random() * 8) + 3
-
-      solution[row][col] = value
-
-      stepDetails.push({
-        step: i + 1,
-        position: [row, col],
-        value,
-        nodesExplored: nodesExplored,
-        heuristic: algorithm === "astar" ? Math.floor(Math.random() * 10) : null,
-        beamWidth: algorithm === "beam" ? 5 : null,
-      })
-    }
-
-    return {
-      success: true,
-      steps: emptyCells.length,
-      nodesExplored,
-      solution,
-      stepDetails,
-    }
-  }
+  };
 
   const handleCellChange = (row: number, col: number, value: string) => {
     const newValue = value === "" ? 0 : Number.parseInt(value)
@@ -377,12 +346,27 @@ export function SudokuGame({ onSolveComplete }: SudokuGameProps) {
               Solve with Beam Search
             </Button>
           </div>
+{currentStepIndex >= 0 && (
+  <div className="mt-4 text-center">
+    <Badge variant="secondary" className="text-sm px-3 py-1">
+      Step {currentStepIndex + 1} of {stepVisualizations.length}
+    </Badge>
+    <div className="text-xs text-muted-foreground mt-1">
+      Current Step Time: {stepVisualizations[currentStepIndex]?.timeTaken ?? 0} ms
+    </div>
 
-          {currentStepIndex >= 0 && (
+  </div>
+)}
+          {(solveTime !== null) && (
             <div className="mt-4 text-center">
-              <Badge variant="secondary" className="text-sm px-3 py-1">
-                Step {currentStepIndex + 1} of {stepVisualizations.length}
-              </Badge>
+              <div className="text-lg font-semibold">
+                {isLoading ? (
+                  <></>
+                ) : (
+                  <>Total Solving Time: <span className="text-blue-600 dark:text-blue-400">{solveTime} ms</span></>
+                )}
+              </div>
+
             </div>
           )}
         </CardContent>

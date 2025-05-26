@@ -96,6 +96,9 @@ export function AlgorithmSteps({ steps, algorithm, isLoading }: AlgorithmStepsPr
                   <div className="text-xs text-muted-foreground bg-gray-100 dark:bg-gray-600 px-2 py-1 rounded-lg">
                     Position: ({step.position[0] + 1}, {step.position[1] + 1})
                   </div>
+                          <div className="text-xs text-muted-foreground bg-blue-100 dark:bg-blue-900 px-2 py-1 rounded-lg">
+                      {step.timeTaken || 0}ms
+                    </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-3 text-sm">
